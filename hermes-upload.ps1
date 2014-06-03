@@ -227,7 +227,7 @@ function FTP-Upload
     $FTPRequest.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
     $FTPRequest.Credentials = new-object System.Net.NetworkCredential($user, $pass)
     $FTPRequest.UseBinary = $true
-    $FTPRequest.UsePassive = $false
+    $FTPRequest.UsePassive = $true
     $FTPRequest.KeepAlive = $false
     # Read the File for Upload
     $FileContent = gc -en byte $file
