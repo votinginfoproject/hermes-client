@@ -1,5 +1,5 @@
 #---------------------------------------------
-# Zip functions taken from http://www.technologytoolbox.com/blog/jjameson/archive/2012/02/28/zip-a-folder-using-powershell.aspx
+# Zip functions modified from http://www.technologytoolbox.com/blog/jjameson/archive/2012/02/28/zip-a-folder-using-powershell.aspx
 #---------------------------------------------
 function CountZipItems(
     [__ComObject] $zipFile)
@@ -229,15 +229,20 @@ function FTP-Upload
     $FTPRequest.UseBinary = $true
     $FTPRequest.UsePassive = $true
     $FTPRequest.KeepAlive = $false
-    # Read the File for Upload
-    $FileContent = gc -en byte $file
-    $FTPRequest.ContentLength = $FileContent.Length
-    # Get Stream Request by bytes
-    $Run = $FTPRequest.GetRequestStream()
-    $Run.Write($FileContent, 0, $FileContent.Length)
+
+    # The file stream for upload
+    $FileStream = new-object System.IO.FileStream($file, [System.IO.FileMode]'Open')
+
+    # The FTP stream
+    $FTPStream = $FTPRequest.GetRequestStream()
+
+    $FileStream.CopyTo($FTPStream)
+
     # Cleanup
-    $Run.Close()
-    $Run.Dispose()
+    $FileStream.Close()
+    $FileStream.Dispose()
+    $FTPStream.Close()
+    $FTPStream.Dispose()
 }
 
 #---------------------------------------------
