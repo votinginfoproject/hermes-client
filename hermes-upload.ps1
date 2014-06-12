@@ -226,6 +226,7 @@ function FTP-Upload
     $FTPRequest = [System.Net.FtpWebRequest]::Create($server+$zipFilename)
     $FTPRequest.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
     $FTPRequest.Credentials = new-object System.Net.NetworkCredential($user, $pass)
+    $FTPRequest.EnableSsl = $true
     $FTPRequest.UseBinary = $true
     $FTPRequest.UsePassive = $true
     $FTPRequest.KeepAlive = $false
