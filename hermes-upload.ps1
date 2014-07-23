@@ -1,6 +1,13 @@
 #---------------------------------------------
 # Zip functions modified from http://www.technologytoolbox.com/blog/jjameson/archive/2012/02/28/zip-a-folder-using-powershell.aspx
 #---------------------------------------------
+
+If ((Test-Path variable:\PSVersionTable) -And ($PSVersionTable.PSVersion.Major -lt 4)) {
+   Throw "You are running an old version of PowerShell. Please update to at least version 4." +
+         "`r`n" + "Please see the following link:" +
+         "`r`n" + "http://social.technet.microsoft.com/wiki/contents/articles/21016.how-to-install-windows-powershell-4-0.aspx"
+}
+
 function CountZipItems(
     [__ComObject] $zipFile)
 {
