@@ -267,7 +267,7 @@ $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 # TBD: correct credentials and settings
 $username = "admin"
 $password = "admin"
-$server = "ftp://127.0.0.1/"
+$server = "ftp://ftp.votinginfoproject.org/"
 
 # TBD: FIPS and election date handling
 $fips = "12345"
