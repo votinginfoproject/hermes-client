@@ -264,12 +264,10 @@ function delete-if-exists
 }
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
-# TBD: correct credentials and settings
 $username = "admin"
 $password = "admin"
 $server = "ftp://ftp.votinginfoproject.org/"
 
-# TBD: FIPS and election date handling
 $fips = "12345"
 $electionDate = "2016-11-08"
 
