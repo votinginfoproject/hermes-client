@@ -1,3 +1,9 @@
+param (
+    [Parameter(Mandatory=$true)][string]$username,
+    [Parameter(Mandatory=$true)][string]$password,
+    [Parameter(Mandatory=$true)][Int32]$fips,
+    [Parameter(Mandatory=$true)][string]$electionDate
+)
 #---------------------------------------------
 # Zip functions modified from http://www.technologytoolbox.com/blog/jjameson/archive/2012/02/28/zip-a-folder-using-powershell.aspx
 #---------------------------------------------
@@ -212,7 +218,6 @@ function ZipFolder(
 
     $zipFile.CopyHere($directory.FullName)
 
-
     WaitForZipOperationToFinish $zipFile $expectedCount
 
     Write-Host -Fore Green ("Successfully created zip file for folder (" `
@@ -264,13 +269,7 @@ function delete-if-exists
 }
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
-$username = "admin"
-$password = "admin"
 $server = "ftp://ftp.votinginfoproject.org/"
-
-$fips = "12345"
-$electionDate = "2016-11-08"
-
 $zipFilename = "vipFeed-$fips-$electionDate.zip"
 
 echo "Clearing old feed zips if they exist"
