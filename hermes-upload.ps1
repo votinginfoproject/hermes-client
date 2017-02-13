@@ -16,7 +16,7 @@ function CountZipItems(
         Throw "Value cannot be null: zipFile"
     }
 
-    Write-Host ("Counting items in zip file (" + $zipFile.Self.Path + ")...")
+    Write-Host ("Counting files in zip file (" + $zipFile.Self.Path + ")...")
 
     [int] $count = CountZipItemsRecursive($zipFile)
 
@@ -38,11 +38,11 @@ function CountZipItemsRecursive(
 
     $parent.Items() |
         ForEach-Object {
-            $count += 1
-
-            If ($_.IsFolder -eq $true)
-            {
+            If ($_.IsFolder -eq $true) {
                 $count += CountZipItemsRecursive($_.GetFolder)
+            }
+            Else {
+                $count += 1
             }
         }
 
@@ -207,11 +207,14 @@ function ZipFolder(
         Throw "Failed to get zip file object."
     }
 
-    [int] $expectedCount = (Get-ChildItem $directory -Force -Recurse).Count
-    $expectedCount += 1
+    [int] $expectedCount = (Get-ChildItem $directory -File -Recurse).Count
+    Write-Host ("Found $expectedCount files in " + $directory.FullName)
+
+    If ($expectedCount -eq 0) {
+        Throw ("Unable to build zip file; the folder " + $directory.FullName + " is empty")
+    }
 
     $zipFile.CopyHere($directory.FullName)
-
 
     WaitForZipOperationToFinish $zipFile $expectedCount
 
