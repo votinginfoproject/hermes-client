@@ -222,38 +222,109 @@ function ZipFolder(
         + $directory.FullName + ").")
 }
 
-function FTP-Upload
+################################################################################
+# Upload source: http://blog.majcica.com/2016/01/13/powershell-tips-and-tricks-multipartform-data-requests/
+################################################################################
+function Invoke-MultipartFormDataUpload
 {
-    param(
-        [string] $user = $null,
-        [string] $pass = $null,
-        [string] $file = $null,
-        [string] $server = $null,
-        [string] $zipFilename = $null
+    [CmdletBinding()]
+    PARAM
+    (
+        [string][parameter(Mandatory = $true)][ValidateNotNullOrEmpty()]$UserId,
+        [string][parameter(Mandatory = $true)][ValidateNotNullOrEmpty()]$ApiKey,
+        [string][parameter(Mandatory = $true)][ValidateNotNullOrEmpty()]$InFile,
+        [string]$ContentType,
+        [string]$ElectionDate,
+        [Uri][parameter(Mandatory = $true)][ValidateNotNullOrEmpty()]$Uri
     )
+    BEGIN
+    {
+        if (-not (Test-Path $InFile))
+        {
+            $errorMessage = ("File {0} missing or unable to read." -f $InFile)
+            $exception =  New-Object System.Exception $errorMessage
+            $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, 'MultipartFormDataUpload', ([System.Management.Automation.ErrorCategory]::InvalidArgument), $InFile
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
+        }
 
-    # Create FTP Rquest Object
-    $FTPRequest = [System.Net.FtpWebRequest]::Create($server+$zipFilename)
-    $FTPRequest.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
-    $FTPRequest.Credentials = new-object System.Net.NetworkCredential($user, $pass)
-    $FTPRequest.EnableSsl = $true
-    $FTPRequest.UseBinary = $true
-    $FTPRequest.UsePassive = $true
-    $FTPRequest.KeepAlive = $false
+        if (-not $ContentType)
+        {
+            Add-Type -AssemblyName System.Web
 
-    # The file stream for upload
-    $FileStream = new-object System.IO.FileStream($file, [System.IO.FileMode]'Open')
+            $mimeType = [System.Web.MimeMapping]::GetMimeMapping($InFile)
 
-    # The FTP stream
-    $FTPStream = $FTPRequest.GetRequestStream()
+            if ($mimeType)
+            {
+                $ContentType = $mimeType
+            }
+            else
+            {
+                $ContentType = "application/octet-stream"
+            }
+        }
+    }
+    PROCESS
+    {
+        Add-Type -AssemblyName System.Net.Http
 
-    $FileStream.CopyTo($FTPStream)
+        $httpClientHandler = New-Object System.Net.Http.HttpClientHandler
+        $httpClient = New-Object System.Net.Http.Httpclient $httpClientHandler
+        $authHeader = "Api-key {0}:{1}" -f $UserId, $ApiKey
+        $httpClient.DefaultRequestHeaders.Add("Authorization", $authHeader)
 
-    # Cleanup
-    $FileStream.Close()
-    $FileStream.Dispose()
-    $FTPStream.Close()
-    $FTPStream.Dispose()
+        $packageFileStream = New-Object System.IO.FileStream @($InFile, [System.IO.FileMode]::Open)
+
+        $contentDispositionHeaderValue = New-Object System.Net.Http.Headers.ContentDispositionHeaderValue "form-data"
+        $contentDispositionHeaderValue.Name = "file"
+        $contentDispositionHeaderValue.FileName = (Split-Path $InFile -leaf)
+
+        $streamContent = New-Object System.Net.Http.StreamContent $packageFileStream
+        $streamContent.Headers.ContentDisposition = $contentDispositionHeaderValue
+        $streamContent.Headers.ContentType = New-Object System.Net.Http.Headers.MediaTypeHeaderValue $ContentType
+
+        $typeContent = New-Object System.Net.Http.StringContent "feed"
+
+        $content = New-Object System.Net.Http.MultipartFormDataContent
+        $content.Add($typeContent, "type")
+        if ($ElectionDate)
+        {
+            $electionDateContent = New-Object System.Net.Http.StringContent $ElectionDate
+            $content.Add($electionDateContent, "election-date")
+        }
+        $content.Add($streamContent)
+
+        try
+        {
+            $response = $httpClient.PostAsync($Uri, $content).Result
+
+            if (!$response.IsSuccessStatusCode)
+            {
+                $responseBody = $response.Content.ReadAsStringAsync().Result
+                $errorMessage = "Status code {0}. Reason {1}. Server reported the following message: {2}." -f $response.StatusCode, $response.ReasonPhrase, $responseBody
+
+                throw [System.Net.Http.HttpRequestException] $errorMessage
+            }
+
+            return $response.Content.ReadAsStringAsync().Result
+        }
+        catch [Exception]
+        {
+            $PSCmdlet.ThrowTerminatingError($_)
+        }
+        finally
+        {
+            if($null -ne $httpClient)
+            {
+                $httpClient.Dispose()
+            }
+
+            if($null -ne $response)
+            {
+                $response.Dispose()
+            }
+        }
+    }
+    END { }
 }
 
 #---------------------------------------------
@@ -267,12 +338,12 @@ function delete-if-exists
 }
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
-$username = "admin"
-$password = "admin"
-$server = "ftp://ftp.votinginfoproject.org/"
+$userId = "<INSERT USER-ID HERE>"
+$apiKey = "<INSERT API-KEY HERE>"
+$server = "https://staging-upload.votinginfoproject.org/upload"
 
 $fips = "12345"
-$electionDate = "2016-11-08"
+$electionDate = "2019-11-08"
 
 $zipFilename = "vipFeed-$fips-$electionDate.zip"
 
@@ -284,4 +355,4 @@ echo "Creating new feed zip"
 ZipFolder $directory $scriptPath\$zipFilename
 
 echo "Uploading feed file"
-FTP-Upload -user $username -pass $password -file $scriptPath\$zipFilename -zipFilename $zipFilename -server $server
+Invoke-MultipartFormDataUpload -UserId $userId -ApiKey $apiKey -InFile $scriptPath\$zipFilename -Uri $server -ElectionDate $electionDate
