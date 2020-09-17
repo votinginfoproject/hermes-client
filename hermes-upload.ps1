@@ -1,4 +1,9 @@
 #---------------------------------------------
+# Force use of TLS 1.2
+#---------------------------------------------
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+#---------------------------------------------
 # Zip functions modified from http://www.technologytoolbox.com/blog/jjameson/archive/2012/02/28/zip-a-folder-using-powershell.aspx
 #---------------------------------------------
 
